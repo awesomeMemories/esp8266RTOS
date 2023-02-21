@@ -34,5 +34,5 @@ void app_main()
     }
     printf("Restarting now.\n");
     fflush(stdout);
-    esp_restart();
+    esp_restart();//To perform software reset of the chip
 }
