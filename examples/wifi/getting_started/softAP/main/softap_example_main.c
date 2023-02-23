@@ -76,8 +76,8 @@ void wifi_init_softap()
 
 void app_main()
 {
-    ESP_ERROR_CHECK(nvs_flash_init());
+    ESP_ERROR_CHECK(nvs_flash_init()); //inicializa No volatile storage en memory flash
 
     ESP_LOGI(TAG, "ESP_WIFI_MODE_AP");
-    wifi_init_softap();
+    wifi_init_softap();   //Llama a esta funcion, no hace mas nada en app-main
 }
