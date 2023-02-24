@@ -75,6 +75,7 @@ esp_err_t get_handler(httpd_req_t *req)
 {
     /* Send a simple response */
     const char resp[] = "URI GET Response";
+    ESP_LOGI(TAG, "Free Stack: '%u'", uxTaskGetStackHighWaterMark(NULL));
     httpd_resp_send(req, resp,strlen(resp));
     return ESP_OK;
 }
