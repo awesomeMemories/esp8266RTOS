@@ -24,6 +24,9 @@
 #include <esp_http_server.h> //Implementacion Servidor protocolo http
 #include <sys/param.h> //Para usar la funcion MIN()
 
+//------ Peripherals------
+#include "driver/gpio.h"  //blink led
+
 /* The examples use WiFi configuration that you can set via project configuration menu
 
    If you'd rather not, just change the below entries to strings with
@@ -45,6 +48,24 @@ static EventGroupHandle_t s_wifi_event_group;
 static const char *TAG = "wifi station";
 
 static int s_retry_num = 0;
+
+//-------Peripherals--------
+#define GPIO_OUTPUT_IO_2    12    //port pin where is conecting led
+#define GPIO_OUTPUT_PIN_LED  (1ULL<<GPIO_OUTPUT_IO_2) //to set te pin
+
+//task to blinker the led
+static void gpio_task_blinker(void *arg)
+{
+    int counter = 0;
+
+    while (1) {
+        ESP_LOGI(TAG, "Led cnt: %d\n", counter++);
+        ESP_LOGI(TAG, "FS led: '%u'", uxTaskGetStackHighWaterMark(NULL)); //monitore Free stack memory
+        vTaskDelay(2000 / portTICK_RATE_MS);
+        gpio_set_level(GPIO_OUTPUT_IO_2, counter % 2);
+    }
+}
+
 
 static void event_handler(void* arg, esp_event_base_t event_base,
                                 int32_t event_id, void* event_data)
@@ -75,7 +96,7 @@ esp_err_t get_handler(httpd_req_t *req)
 {
     /* Send a simple response */
     const char resp[] = "URI GET Response";
-    ESP_LOGI(TAG, "Free Stack: '%u'", uxTaskGetStackHighWaterMark(NULL));
+    ESP_LOGI(TAG, "FS server: '%u'", uxTaskGetStackHighWaterMark(NULL)); //monitore Free stack memory
     httpd_resp_send(req, resp,strlen(resp));
     return ESP_OK;
 }
@@ -232,6 +253,28 @@ void wifi_init_sta(void)
 
 void app_main()
 {
+    //---Peripherals-----
+    gpio_config_t io_conf; //variable to config the pin
+    //BLINKER LED PIN
+    //disable interrupt
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    //set as output mode
+    io_conf.mode = GPIO_MODE_OUTPUT;
+    //bit mask of the pins that you want to set,e.g.GPIO15/16
+    io_conf.pin_bit_mask = GPIO_OUTPUT_PIN_LED;
+    //disable pull-down mode
+    io_conf.pull_down_en = 0;
+    //disable pull-up mode
+    io_conf.pull_up_en = 0;
+    //configure GPIO with the given settings
+    gpio_config(&io_conf);
+
+    //start blinker task
+    xTaskCreate(gpio_task_blinker, "gpio_task_blinker", 1048, NULL, 10, NULL);
+    //                                                               |
+    //                                                               priority
+
+    //-----------------------------------------
     ESP_ERROR_CHECK(nvs_flash_init());
 
     ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
