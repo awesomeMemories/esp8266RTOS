@@ -1,0 +1,24 @@
+#Add in the profile file, if it don't exist
+$ vim ~/.profile
+
+#To make xtensa-lx106-elf available for all terminal sessions, add the following line to your ~/.profile
+#file:
+export PATH="$PATH:$HOME/myhome/esp8266/xtensa-lx106-elf/bin"
+
+#You can manually source the .profile file to update the current shell session with the new path.
+#Use the following command in your terminal
+source ~/.profile
+#Other command to verify if PATH is correcty set
+printenv PATH
+
+
+
+#---------------------------------------
+#Alternativy,you may create an alias for the above command. This way you can get the toolchain
+#only when you need it. To do this, add different line to your ~/.profile file:
+#alias get_lx106
+alias get_lx106='export PATH="$PATH:$HOME/myhome/esp8266/xtensa-lx106-elf/bin"'
+
+#Then when you need the toolchain you can type get_lx106 on the command line and the 
+#toolchain will be added to your PATH.
+

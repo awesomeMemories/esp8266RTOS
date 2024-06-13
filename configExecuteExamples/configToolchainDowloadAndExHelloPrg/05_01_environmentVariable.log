@@ -1,0 +1,19 @@
+#Setup Path to  ESP8266_RTOS_SDK
+
+#The toolchain programs access ESP8266_RTOS_SDK using IDF_PATH enviroment variable. This
+#variable should be set up on your PC, otherwise projects will not build. Setting may be done
+#manually, each time PC is restarted. Another option is to set up it permanently by defining
+#IDF_PaTH in user profile.
+
+#Add in the profile file, if it don't exist
+$ vim ~/.profile
+
+# set path for original ESP8266 RTOS SDK
+#export IDF_PATH="$HOME/myhome/esp8266/ESP8266_RTOS_SDK"
+# set path for personal RTOS 
+export IDF_PATH="$HOME/myhome/esp8266/esp8266RTOS"
+
+#Use the following command in your terminal to add new path
+source ~/.profile
+#command to verify if PATH is correcty set
+printenv IDF_PATH

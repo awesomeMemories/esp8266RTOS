@@ -1,0 +1,44 @@
+esptool.py v2.4.0
+Python requirements from /home/pepito/myhome/esp8266/ESP8266_RTOS_SDK/requirements.txt are satisfied.
+Flashing binaries to serial port /dev/ttyUSB0 (app at offset 0x10000)...
+esptool.py v2.4.0
+Traceback (most recent call last):
+  File "/home/pepito/myhome/esp8266/ESP8266_RTOS_SDK/components/esptool_py/esptool/esptool.py", line 3034, in <module>
+    _main()
+  File "/home/pepito/myhome/esp8266/ESP8266_RTOS_SDK/components/esptool_py/esptool/esptool.py", line 3027, in _main
+    main()
+  File "/home/pepito/myhome/esp8266/ESP8266_RTOS_SDK/components/esptool_py/esptool/esptool.py", line 2735, in main
+    esp = chip_class(args.port, initial_baud, args.trace)
+  File "/home/pepito/myhome/esp8266/ESP8266_RTOS_SDK/components/esptool_py/esptool/esptool.py", line 212, in __init__
+    self._port = serial.serial_for_url(port)
+  File "/home/pepito/.local/lib/python2.7/site-packages/serial/__init__.py", line 88, in serial_for_url
+    instance.open()
+  File "/home/pepito/.local/lib/python2.7/site-packages/serial/serialposix.py", line 268, in open
+    raise SerialException(msg.errno, "could not open port {}: {}".format(self._port, msg))
+serial.serialutil.SerialException: [Errno 13] could not open port /dev/ttyUSB0: [Errno 13] Permission denied: '/dev/ttyUSB0'
+make: *** [/home/pepito/myhome/esp8266/ESP8266_RTOS_SDK/components/esptool_py/Makefile.projbuild:76: flash] Error 1
+
+-------------------------------
+Check User Group Membership:
+
+On Linux, specific user groups manage access to serial ports. Ensure your user belongs to the dialout group. You can check your group membership with:
+
+$groups
+-------------------------------
+If you're not in the dialout group, add yourself using:
+
+Bash
+sudo usermod -a -G dialout your_username
+----------------------------------
+Check Port Name:
+
+Double-check that /dev/ttyUSB0 is the correct port name for your ESP8266 device. You can list available serial ports using:
+
+Bash
+ls /dev/ttyUSB*
+------------------------------
+
+sudo usermod -a -G dialout $USER
+
+sudo chmod -R 777 /dev/ttyUSB0
+
