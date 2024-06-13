@@ -2,7 +2,7 @@
 
 1). Testing Configuration Examples:
 
-The directory "test_examples" contain configuration for toolchain( Xtensa LX6 microprocessor), setups and scripts to execute examples.
+The directory "configExecuteExamples" contain configuration for toolchain( Xtensa LX6 microprocessor), setups and scripts to execute examples.
 
 
 
