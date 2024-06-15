@@ -7,10 +7,14 @@ The directory "configExecuteExamples" contain configuration for toolchain( Xtens
 
 
 
-Operating Sistem RTOS for esp8266
-*)_https://github.com/espressif/ESP8266_RTOS_SDK.git
+* Operating System RTOS original for esp8266
+- https://github.com/espressif/ESP8266_RTOS_SDK.git
 
-Toolchair for linux 
-*)_ wget https://dl.espressif.com/dl/xtensa-lx106-elf-gcc8_4_0-esp-2020r3-linux-amd64.tar.gz
+* Toolchain for linux 
+- wget https://dl.espressif.com/dl/xtensa-lx106-elf-gcc8_4_0-esp-2020r3-linux-amd64.tar.gz
+
+* Hardware
+The ESP8266EX microcontroller integrates a Tensilica L106 32-bit RISC processor, which achieves extra-low power consumption and reaches a maximum clock speed of 160 MHz. The Real-Time Operating System (RTOS) and Wi-Fi stack allow about 80% of the processing power to be available for user application programming and development.
+
 
 
