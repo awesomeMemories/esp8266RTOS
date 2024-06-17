@@ -53,16 +53,39 @@ static int s_retry_num = 0;
 #define GPIO_OUTPUT_IO_2    12    //port pin where is conecting led
 #define GPIO_OUTPUT_PIN_LED  (1ULL<<GPIO_OUTPUT_IO_2) //to set te pin
 
-//task to blinker the led
+//Task manage GPIO: to blinker the led
 static void gpio_task_blinker(void *arg)
 {
+    //---Config. Peripherals
+    gpio_config_t io_conf; //variable to config the pin
+    //BLINKER LED PIN
+    //disable interrupt
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    //set as output mode
+    io_conf.mode = GPIO_MODE_OUTPUT;
+    //bit mask of the pins that you want to set,e.g.GPIO15/16
+    io_conf.pin_bit_mask = GPIO_OUTPUT_PIN_LED;
+    //disable pull-down mode
+    io_conf.pull_down_en = 0;
+    //disable pull-up mode
+    io_conf.pull_up_en = 0;
+    //configure GPIO with the given settings
+    gpio_config(&io_conf);
+
+    //------------------------
     int counter = 0;
 
     while (1) {
-        ESP_LOGI(TAG, "Led cnt: %d\n", counter++);
-        ESP_LOGI(TAG, "FS led: '%u'", uxTaskGetStackHighWaterMark(NULL)); //monitore Free stack memory
-        vTaskDelay(2000 / portTICK_RATE_MS);
-        gpio_set_level(GPIO_OUTPUT_IO_2, counter % 2);
+        //ESP_LOGI(TAG, "Led cnt: %d\n", counter++);
+        ESP_LOGI(TAG, "FSgpio:%u", uxTaskGetStackHighWaterMark(NULL)); //monitore Free stack memory
+        vTaskDelay(2000 / portTICK_RATE_MS);//2000msec
+	
+	short stateDoor = counter % 2;
+        ESP_LOGI(TAG, "state:%d,%d\n", stateDoor, counter++);
+
+	//gpio_num: GPIO number. If you want to set the output level of e.g. GPIO16, gpio_num should be GPIO_NUM_16 (16);
+	//level: Output level. 0: low ; 1: high
+        gpio_set_level(GPIO_OUTPUT_IO_2, stateDoor);
     }
 }
 
@@ -94,8 +117,10 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 /* Our URI handler function to be called during GET /uri request */
 esp_err_t get_handler(httpd_req_t *req)
 {
+    //Detect type of request
+    
     /* Send a simple response */
-    const char resp[] = "URI GET Response";
+    const char resp[] = "GET resp.";
     ESP_LOGI(TAG, "FS server: '%u'", uxTaskGetStackHighWaterMark(NULL)); //monitore Free stack memory
     httpd_resp_send(req, resp,strlen(resp));
     return ESP_OK;
@@ -136,7 +161,7 @@ esp_err_t post_handler(httpd_req_t *req)
 
 /* URI handler structure for GET /uri */
 httpd_uri_t uri_get = {
-    .uri      = "/uri",
+    .uri      = "/kk",
     .method   = HTTP_GET,
     .handler  = get_handler,
     .user_ctx = NULL
@@ -144,7 +169,7 @@ httpd_uri_t uri_get = {
 
 /* URI handler structure for POST /uri */
 httpd_uri_t uri_post = {
-    .uri      = "/uri",
+    .uri      = "/kk",
     .method   = HTTP_POST,
     .handler  = post_handler,
     .user_ctx = NULL
@@ -181,15 +206,28 @@ void stop_webserver(httpd_handle_t server)
 
 void wifi_init_sta(void)
 {
+    ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
+
+    //Event groups are a synchronization mechanism used for communication between tasks
+    //An event group is essentially a collection of individual flags, each representing a specific event or condition.
     s_wifi_event_group = xEventGroupCreate();
 
+    //It initialized the default TCP/IP stack on your ESP device. This included tasks like memory allocation, 
+    //setting up network interfaces (Wi-Fi or Ethernet), and starting essential network services.
     tcpip_adapter_init();
 
+    //This function is used to create the default event loop. This event loop provides a mechanism for components and 
+    //tasks in your application to communicate and synchronize using events.
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
+    //esp_wifi_init initiates internal tasks responsible for managing Wi-Fi functionality, such as scanning for
+    //networks, handling connections, and data transmission/reception.
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
+    //esp_event_handler_register is a function used to register a handler function for specific events within your 
+    //application. This mechanism allows different parts of your code to communicate and synchronize based on events 
+    //being posted to a central event loop.
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL));
 
@@ -234,8 +272,13 @@ void wifi_init_sta(void)
         ESP_LOGE(TAG, "UNEXPECTED EVENT");
     }
 
+    //esp_event_handler_unregister is a function used to unregister a previously registered event handler. 
+    //This allows you to stop a specific function from being called when corresponding events are posted to the 
+    //event loop.
     ESP_ERROR_CHECK(esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler));
     ESP_ERROR_CHECK(esp_event_handler_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler));
+
+    //vEventGroupDelete is used to delete an event group that was previously created using xEventGroupCreate 
     vEventGroupDelete(s_wifi_event_group);
     
     if (bits & WIFI_CONNECTED_BIT) {
@@ -253,30 +296,27 @@ void wifi_init_sta(void)
 
 void app_main()
 {
-    //---Peripherals-----
-    gpio_config_t io_conf; //variable to config the pin
-    //BLINKER LED PIN
-    //disable interrupt
-    io_conf.intr_type = GPIO_INTR_DISABLE;
-    //set as output mode
-    io_conf.mode = GPIO_MODE_OUTPUT;
-    //bit mask of the pins that you want to set,e.g.GPIO15/16
-    io_conf.pin_bit_mask = GPIO_OUTPUT_PIN_LED;
-    //disable pull-down mode
-    io_conf.pull_down_en = 0;
-    //disable pull-up mode
-    io_conf.pull_up_en = 0;
-    //configure GPIO with the given settings
-    gpio_config(&io_conf);
-
-    //start blinker task
-    xTaskCreate(gpio_task_blinker, "gpio_task_blinker", 1048, NULL, 10, NULL);
-    //                                                               |
-    //                                                               priority
-
     //-----------------------------------------
+    //init Non-Volatile Storage
+    //By initializing NVS first, you ensure that it's ready to be used by any tasks you create later that might 
+    //need to access or modify this persistent storage.
+    //
+    //Initializing NVS first ensures a clean startup sequence and avoids potential conflicts.
     ESP_ERROR_CHECK(nvs_flash_init());
 
-    ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
     wifi_init_sta();
+
+    //---Task to manage GPIO: blinker led
+    xTaskCreate(gpio_task_blinker, "gpio_task_blinker", 1048, NULL, 10, NULL);
+    //          |                   |                   |     |     |   |
+    //          |                   |                   |     |     |   Used to pass a handler to the created task
+    //          |                   |                   |     |     priority
+    //          |                   |                   |     A value that is passed as the parameter to the created
+    //          |                   |                   |      task.
+    //          |                   |                   The number of words(not bytes) 
+    //          |                   A descriptive name for the task   
+    //          Pointer to the task entry function
+
+    //Note: esp8266RTOS/components/freertos/port/esp8266/include/freertos/FreeRTOSConfig.h
+    //#define configMAX_PRIORITIES		15
 }
