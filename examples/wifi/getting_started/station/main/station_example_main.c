@@ -23,9 +23,9 @@
 
 #include <esp_http_server.h> //Implementacion Servidor protocolo http
 #include <sys/param.h> //Para usar la funcion MIN()
-
 //------ Peripherals------
 #include "driver/gpio.h"  //blink led
+#include "freertos/queue.h" //queue
 
 /* The examples use WiFi configuration that you can set via project configuration menu
 
@@ -48,6 +48,10 @@ static EventGroupHandle_t s_wifi_event_group;
 static const char *TAG = "wifi station";
 
 static int s_retry_num = 0;
+
+//-------Queue------------
+static xQueueHandle gpio_manage_queue = NULL;
+bool doorState = false;
 
 //-------Peripherals--------
 #define GPIO_OUTPUT_IO_2    12    //port pin where is conecting led
@@ -80,12 +84,16 @@ static void gpio_task_blinker(void *arg)
         ESP_LOGI(TAG, "FSgpio:%u", uxTaskGetStackHighWaterMark(NULL)); //monitore Free stack memory
         vTaskDelay(2000 / portTICK_RATE_MS);//2000msec
 	
-	short stateDoor = counter % 2;
-        ESP_LOGI(TAG, "state:%d,%d\n", stateDoor, counter++);
+	//short doorStateOC = counter % 2;
+	uint32_t doorStateOC;
+        if(xQueueReceive(gpio_manage_queue, &doorStateOC, ( TickType_t ) 10 ))
+	{
+           ESP_LOGI(TAG, "state:%d,%d\n", doorStateOC, counter++);
+        }
 
 	//gpio_num: GPIO number. If you want to set the output level of e.g. GPIO16, gpio_num should be GPIO_NUM_16 (16);
 	//level: Output level. 0: low ; 1: high
-        gpio_set_level(GPIO_OUTPUT_IO_2, stateDoor);
+        gpio_set_level(GPIO_OUTPUT_IO_2, doorStateOC);
     }
 }
 
@@ -122,6 +130,26 @@ esp_err_t get_handler(httpd_req_t *req)
     /* Send a simple response */
     const char resp[] = "GET resp.";
     ESP_LOGI(TAG, "FS server: '%u'", uxTaskGetStackHighWaterMark(NULL)); //monitore Free stack memory
+    //Read req value and set 
+    uint32_t door;
+    if(doorState)
+    {
+      doorState = false;
+      door = 1;
+    }
+    else
+    {
+      doorState = true;
+      door = 0;
+    }
+    // Send an uint32_t.  Wait for 10 ticks for space to become
+    // available if necessary.
+    if( xQueueSendToFront( gpio_manage_queue, ( void * ) &door, ( TickType_t ) 10 ) != pdPASS )
+    {
+         // Failed to post the message, even after 10 ticks.
+         ESP_LOGI(TAG, "Error sent data");
+    }
+
     httpd_resp_send(req, resp,strlen(resp));
     return ESP_OK;
 }
@@ -306,8 +334,16 @@ void app_main()
 
     wifi_init_sta();
 
+    //create a queue to handle gpio manage from http server
+    gpio_manage_queue = xQueueCreate(10, sizeof(uint32_t));
+    if( gpio_manage_queue == 0 )//stop program or only use the task that don't use queue
+    {
+       ESP_LOGI(TAG, "Queue was not created and must not be used");
+    }
+
     //---Task to manage GPIO: blinker led
-    xTaskCreate(gpio_task_blinker, "gpio_task_blinker", 1048, NULL, 10, NULL);
+    //xTaskCreate(gpio_task_blinker, "gpio_task_blinker", 1048, NULL, 10, NULL);
+    xTaskCreate(gpio_task_blinker, "gpio_task_blinker", 1500, NULL, 10, NULL);
     //          |                   |                   |     |     |   |
     //          |                   |                   |     |     |   Used to pass a handler to the created task
     //          |                   |                   |     |     priority
