@@ -130,24 +130,39 @@ esp_err_t get_handler(httpd_req_t *req)
     /* Send a simple response */
     const char resp[] = "GET resp.";
     ESP_LOGI(TAG, "FS server: '%u'", uxTaskGetStackHighWaterMark(NULL)); //monitore Free stack memory
-    //Read req value and set 
+									 
     uint32_t door;
-    if(doorState)
+    //Read req value and set 
+    if( sizeof(req->uri) >= 10)
     {
-      doorState = false;
-      door = 1;
+      char limit[11];
+      strncpy(limit,req->uri,10);
+      limit[11] = '\0';
+      ESP_LOGI(TAG, "uri:'%s'", limit);
+
+      if(limit[9] == '1')
+      {
+        door = 1;
+      }
+      else if(limit[9] == '0')
+      {
+        door = 0;
+      }
+      else
+      {
+        ESP_LOGI(TAG, "E0100:'%c'", limit[9]); //Invalid state was recieved 
+      }
     }
     else
     {
-      doorState = true;
-      door = 0;
-    }
+      ESP_LOGI(TAG, "E0101:'%s'", req->uri); //A short request was received 
+    } 
+
     // Send an uint32_t.  Wait for 10 ticks for space to become
     // available if necessary.
     if( xQueueSendToFront( gpio_manage_queue, ( void * ) &door, ( TickType_t ) 10 ) != pdPASS )
     {
-         // Failed to post the message, even after 10 ticks.
-         ESP_LOGI(TAG, "Error sent data");
+         ESP_LOGI(TAG, "E0102"); // Failed to post the message, even after 10 ticks.
     }
 
     httpd_resp_send(req, resp,strlen(resp));
